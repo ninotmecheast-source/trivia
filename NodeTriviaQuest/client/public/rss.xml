@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Triveast News</title>
+    <link>https://triveast.com/</link>
+    <description>Latest updates and news from Triveast</description>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 18 Sep 2025 15:00:00 GMT</lastBuildDate>
+
+    <item>
+      <title>Welcome to Triveast</title>
+      <link>https://triveast.com/news/welcome</link>
+      <description>This is our very first news post on Triveast.</description>
+      <pubDate>Thu, 18 Sep 2025 14:00:00 GMT</pubDate>
+    </item>
+
+    <item>
+      <title>Trivia Game Updated</title>
+      <link>https://triveast.com/news/trivia-update</link>
+      <description>We’ve added donation buttons, score tracking, and an RSS feed!</description>
+      <pubDate>Thu, 18 Sep 2025 14:15:00 GMT</pubDate>
+    </item>
+  
+</channel>
+</rss>
