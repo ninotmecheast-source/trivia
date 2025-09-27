@@ -106,7 +106,7 @@ export default function UpdateRSS() {
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || 'admin123');
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || '');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Smart suggestions
@@ -348,6 +348,13 @@ export default function UpdateRSS() {
       const data = await res.json();
       
       if (!res.ok) {
+        // If unauthorized, show auth dialog to get new token
+        if (res.status === 401) {
+          setShowAuthDialog(true);
+          setIsPublishing(false);
+          setMessage("Authentication required. Please enter your admin token.");
+          return;
+        }
         throw new Error(data.error || `Server error: ${res.status}`);
       }
       
@@ -383,7 +390,9 @@ export default function UpdateRSS() {
     if (adminToken.trim()) {
       localStorage.setItem('adminToken', adminToken.trim());
       setShowAuthDialog(false);
-      setMessage('Admin token saved. You can now publish posts.');
+      setMessage('Admin token saved. You can now try publishing again.');
+    } else {
+      setMessage('Please enter a valid admin token.');
     }
   };
 
