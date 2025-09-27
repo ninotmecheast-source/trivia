@@ -30,6 +30,17 @@ export const gameSessions = pgTable("game_sessions", {
   questionResults: jsonb("question_results"), // Array of {questionId, selectedAnswer, isCorrect, timeSpent}
 });
 
+export const rssPosts = pgTable("rss_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  link: text("link"),
+  imageUrl: text("image_url"),
+  imageType: text("image_type"),
+  pubDate: text("pub_date").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 // Known category IDs
 export const VALID_CATEGORY_IDS = ["general", "science", "history", "sports", "entertainment", "music"] as const;
 
@@ -37,6 +48,7 @@ export const VALID_CATEGORY_IDS = ["general", "science", "history", "sports", "e
 export const insertCategorySchema = createInsertSchema(categories);
 export const insertQuestionSchema = createInsertSchema(questions).omit({ id: true });
 export const insertGameSessionSchema = createInsertSchema(gameSessions).omit({ id: true });
+export const insertRssPostSchema = createInsertSchema(rssPosts).omit({ id: true, createdAt: true });
 
 // Validation schemas for API endpoints
 export const categoryQuestionsParamsSchema = z.object({
@@ -105,7 +117,9 @@ export const createUpdateGameSessionSchema = (totalQuestions?: number) => {
 export type Category = typeof categories.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type GameSession = typeof gameSessions.$inferSelect;
+export type RssPost = typeof rssPosts.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type InsertGameSession = z.infer<typeof insertGameSessionSchema>;
+export type InsertRssPost = z.infer<typeof insertRssPostSchema>;
 export type UpdateGameSession = z.infer<typeof updateGameSessionSchema>;
