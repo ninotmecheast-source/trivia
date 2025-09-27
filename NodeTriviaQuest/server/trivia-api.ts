@@ -47,20 +47,33 @@ export class TriviaAPIService {
    * Get questions for a specific category from the API or cache
    */
   async getQuestionsByCategory(categoryId: string, limit = 10): Promise<Question[]> {
-    const cacheKey = `${categoryId}_${limit}`;
+    // For single questions, use a larger cache to ensure variety
+    const cacheSize = limit === 1 ? 50 : Math.max(limit, 20);
+    const cacheKey = `${categoryId}_batch`;
     
     // Check cache first
     const cached = this.getCachedQuestions(cacheKey);
     if (cached && cached.length >= limit) {
+      // For single questions, return a random question from the cache
+      if (limit === 1) {
+        const randomIndex = Math.floor(Math.random() * Math.min(cached.length, 20));
+        return [cached[randomIndex]];
+      }
       return cached.slice(0, limit);
     }
 
     try {
       // Fetch from API
-      const questions = await this.fetchQuestionsFromAPI(categoryId, limit);
+      const questions = await this.fetchQuestionsFromAPI(categoryId, cacheSize);
       
       // Cache the results
       this.cacheQuestions(cacheKey, questions);
+      
+      // For single questions, return a random question from the fetched batch
+      if (limit === 1 && questions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * questions.length);
+        return [questions[randomIndex]];
+      }
       
       return questions.slice(0, limit);
     } catch (error) {
@@ -70,6 +83,10 @@ export class TriviaAPIService {
       const fallbackCache = this.cache.get(cacheKey);
       if (fallbackCache && fallbackCache.questions.length > 0) {
         console.log("Using expired cache as fallback");
+        if (limit === 1) {
+          const randomIndex = Math.floor(Math.random() * Math.min(fallbackCache.questions.length, 20));
+          return [fallbackCache.questions[randomIndex]];
+        }
         return fallbackCache.questions.slice(0, limit);
       }
       
