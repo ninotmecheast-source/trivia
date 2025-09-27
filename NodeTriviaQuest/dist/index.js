@@ -35,20 +35,33 @@ var TriviaAPIService = class {
    * Get questions for a specific category from the API or cache
    */
   async getQuestionsByCategory(categoryId, limit = 10) {
-    const cacheKey = `${categoryId}_${limit}`;
+    const cacheSize = limit === 1 ? 50 : Math.max(limit, 20);
+    const cacheKey = `${categoryId}_batch`;
     const cached = this.getCachedQuestions(cacheKey);
     if (cached && cached.length >= limit) {
+      if (limit === 1) {
+        const randomIndex = Math.floor(Math.random() * Math.min(cached.length, 20));
+        return [cached[randomIndex]];
+      }
       return cached.slice(0, limit);
     }
     try {
-      const questions2 = await this.fetchQuestionsFromAPI(categoryId, limit);
+      const questions2 = await this.fetchQuestionsFromAPI(categoryId, cacheSize);
       this.cacheQuestions(cacheKey, questions2);
+      if (limit === 1 && questions2.length > 0) {
+        const randomIndex = Math.floor(Math.random() * questions2.length);
+        return [questions2[randomIndex]];
+      }
       return questions2.slice(0, limit);
     } catch (error) {
       console.error("Error fetching questions from API:", error);
       const fallbackCache = this.cache.get(cacheKey);
       if (fallbackCache && fallbackCache.questions.length > 0) {
         console.log("Using expired cache as fallback");
+        if (limit === 1) {
+          const randomIndex = Math.floor(Math.random() * Math.min(fallbackCache.questions.length, 20));
+          return [fallbackCache.questions[randomIndex]];
+        }
         return fallbackCache.questions.slice(0, limit);
       }
       return this.getFallbackQuestions(categoryId, limit);
