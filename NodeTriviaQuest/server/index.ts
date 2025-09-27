@@ -148,15 +148,16 @@ app.get("/api/portfolio", (req, res) => {
 // ---------------- RSS POSTS -----------------
 app.post("/api/rss/add", upload.single("image"), async (req: Request, res: Response) => {
   try {
-    // Only allow this endpoint if an admin token matches. If ADMIN_TOKEN is set in
-    // the environment, require callers to provide an identical token via the
-    // X-Admin-Token header. Without a valid token, return 401 Unauthorized.
+    // Require ADMIN_TOKEN unconditionally for security. This endpoint must be protected
+    // to prevent unauthorized posting. The ADMIN_TOKEN environment variable must be set.
     const configuredToken = process.env.ADMIN_TOKEN;
-    if (configuredToken) {
-      const headerToken = req.headers["x-admin-token"];
-      if (!headerToken || headerToken !== configuredToken) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+    if (!configuredToken) {
+      return res.status(500).json({ error: "Server configuration error: ADMIN_TOKEN not set" });
+    }
+    
+    const headerToken = req.headers["x-admin-token"];
+    if (!headerToken || headerToken !== configuredToken) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const { title, link, description } = req.body;
