@@ -194,7 +194,7 @@ app.post("/api/rss/add", upload.single("image"), async (req: Request, res: Respo
       link: link || "https://triveast.com/news",
       imageUrl,
       imageType,
-      pubDate: new Date().toUTCString()
+      pubDate: new Date()
     };
 
     await db.insert(rssPosts).values(newPost);
@@ -222,7 +222,7 @@ app.get("/rss.xml", async (req: Request, res: Response) => {
     const posts = await db.select().from(rssPosts).orderBy(desc(rssPosts.pubDate));
 
     // Generate RSS XML
-    const lastBuildDate = posts.length > 0 ? posts[0].pubDate : new Date().toUTCString();
+    const lastBuildDate = posts.length > 0 ? posts[0].pubDate.toUTCString() : new Date().toUTCString();
     
     let rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -248,7 +248,7 @@ app.get("/rss.xml", async (req: Request, res: Response) => {
       }
       
       rssXml += `
-      <pubDate>${escapeXml(post.pubDate)}</pubDate>
+      <pubDate>${escapeXml(post.pubDate.toUTCString())}</pubDate>
     </item>
 
 `;
