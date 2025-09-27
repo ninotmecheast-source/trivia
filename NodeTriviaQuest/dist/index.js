@@ -1,3 +1,9 @@
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
 // server/index.ts
 import express2 from "express";
 
@@ -431,8 +437,24 @@ var MemStorage = class {
 var storage = new MemStorage();
 
 // shared/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  VALID_CATEGORY_IDS: () => VALID_CATEGORY_IDS,
+  categories: () => categories,
+  categoryQuestionsParamsSchema: () => categoryQuestionsParamsSchema,
+  categoryQuestionsQuerySchema: () => categoryQuestionsQuerySchema,
+  createUpdateGameSessionSchema: () => createUpdateGameSessionSchema,
+  gameSessions: () => gameSessions,
+  insertCategorySchema: () => insertCategorySchema,
+  insertGameSessionSchema: () => insertGameSessionSchema,
+  insertQuestionSchema: () => insertQuestionSchema,
+  insertRssPostSchema: () => insertRssPostSchema,
+  questions: () => questions,
+  rssPosts: () => rssPosts,
+  updateGameSessionSchema: () => updateGameSessionSchema
+});
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 var categories = pgTable("categories", {
@@ -461,10 +483,21 @@ var gameSessions = pgTable("game_sessions", {
   questionResults: jsonb("question_results")
   // Array of {questionId, selectedAnswer, isCorrect, timeSpent}
 });
+var rssPosts = pgTable("rss_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  link: text("link"),
+  imageUrl: text("image_url"),
+  imageType: text("image_type"),
+  pubDate: timestamp("pub_date", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`CURRENT_TIMESTAMP`)
+});
 var VALID_CATEGORY_IDS = ["general", "science", "history", "sports", "entertainment", "music"];
 var insertCategorySchema = createInsertSchema(categories);
 var insertQuestionSchema = createInsertSchema(questions).omit({ id: true });
 var insertGameSessionSchema = createInsertSchema(gameSessions).omit({ id: true });
+var insertRssPostSchema = createInsertSchema(rssPosts).omit({ id: true, createdAt: true });
 var categoryQuestionsParamsSchema = z.object({
   categoryId: z.enum(VALID_CATEGORY_IDS, {
     errorMap: () => ({ message: "Invalid category. Must be one of: general, science, history, sports, entertainment, music" })
@@ -780,7 +813,6 @@ function serveStatic(app2) {
 
 // server/index.ts
 import path3 from "path";
-import fs2 from "fs";
 import { fileURLToPath } from "url";
 import multer from "multer";
 import cors from "cors";
@@ -883,7 +915,22 @@ var StockService = class {
   }
 };
 
+// server/db.ts
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
+}
+var pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+});
+var db = drizzle({ client: pool, schema: schema_exports });
+
 // server/index.ts
+import { desc } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path3.dirname(__filename);
 var app = express2();
@@ -909,7 +956,7 @@ app.use(
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
 var upload = multer({
-  dest: path3.resolve(__dirname, "../client/public/uploads"),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   // 5MB
   fileFilter: (_req, file, cb) => {
@@ -974,62 +1021,86 @@ app.post("/api/sell", (req, res) => {
 app.get("/api/portfolio", (req, res) => {
   res.json({ balance: stockService.getBalance(), portfolio: stockService.getPortfolio() });
 });
-app.post("/api/rss/add", upload.single("image"), (req, res) => {
-  const configuredToken = process.env.ADMIN_TOKEN;
-  if (configuredToken) {
+app.post("/api/rss/add", upload.single("image"), async (req, res) => {
+  try {
+    const configuredToken = process.env.ADMIN_TOKEN;
+    if (!configuredToken) {
+      return res.status(500).json({ error: "Server configuration error: ADMIN_TOKEN not set" });
+    }
     const headerToken = req.headers["x-admin-token"];
     if (!headerToken || headerToken !== configuredToken) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-  }
-  const { title, link, description } = req.body;
-  const file = req.file;
-  if (!title || !description) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-  const escapeXml = (str) => String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
-  const rssPath = path3.resolve(__dirname, "../client/public/rss.xml");
-  if (!fs2.existsSync(rssPath)) {
-    const baseRss = `<?xml version="1.0" encoding="UTF-8" ?>
-      <rss version="2.0">
-        <channel>
-          <title>Triveast News</title>
-          <link>https://triveast.com/news</link>
-          <description>Latest updates and news from Triveast</description>
-          <language>en-us</language>
-          <lastBuildDate>${(/* @__PURE__ */ new Date()).toUTCString()}</lastBuildDate>
-        </channel>
-      </rss>`;
-    fs2.writeFileSync(rssPath, baseRss, "utf8");
-  }
-  let xml = fs2.readFileSync(rssPath, "utf8");
-  let imageTag = "";
-  if (file) {
-    const ext = path3.extname(file.originalname).toLowerCase();
-    const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
-    if (!allowedExt.includes(ext)) {
-      fs2.unlinkSync(file.path);
-      return res.status(400).json({ error: "Invalid file type" });
+    const { title, link, description } = req.body;
+    const file = req.file;
+    if (!title || !description) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-    const newFileName = `${file.filename}${ext}`;
-    const uploadDir = path3.resolve(__dirname, "../client/public/uploads");
-    const newPath = path3.join(uploadDir, newFileName);
-    fs2.renameSync(file.path, newPath);
-    imageTag = `<enclosure url="/uploads/${newFileName}" type="image/${ext.replace(".", "")}" />`;
+    let imageUrl;
+    let imageType;
+    if (file) {
+      const ext = path3.extname(file.originalname).toLowerCase();
+      const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
+      if (!allowedExt.includes(ext)) {
+        return res.status(400).json({ error: "Invalid file type" });
+      }
+      const base64Image = `data:image/${ext.replace(".", "")};base64,${file.buffer.toString("base64")}`;
+      imageUrl = base64Image;
+      imageType = `image/${ext.replace(".", "")}`;
+    }
+    const newPost = {
+      title,
+      description,
+      link: link || "https://triveast.com/news",
+      imageUrl,
+      imageType,
+      pubDate: /* @__PURE__ */ new Date()
+    };
+    await db.insert(rssPosts).values(newPost);
+    res.json({ success: true, message: "Post added!" });
+  } catch (error) {
+    console.error("Error adding RSS post:", error);
+    res.status(500).json({ error: "Failed to add post" });
   }
-  const newItem = `
-    <item>
-      <title>${escapeXml(title)}</title>
-      <link>${escapeXml(link || "https://triveast.com/news")}</link>
-      <description>${escapeXml(description)}</description>
-      ${imageTag}
-      <pubDate>${(/* @__PURE__ */ new Date()).toUTCString()}</pubDate>
+});
+app.get("/rss.xml", async (req, res) => {
+  try {
+    const escapeXml = (str) => String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
+    const posts = await db.select().from(rssPosts).orderBy(desc(rssPosts.pubDate));
+    const lastBuildDate = posts.length > 0 ? posts[0].pubDate.toUTCString() : (/* @__PURE__ */ new Date()).toUTCString();
+    let rssXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Triveast News</title>
+    <link>https://triveast.com/</link>
+    <description>Latest updates and news from Triveast</description>
+    <language>en-us</language>
+    <lastBuildDate>${escapeXml(lastBuildDate)}</lastBuildDate>
+
+`;
+    for (const post of posts) {
+      rssXml += `    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${escapeXml(post.link || "https://triveast.com/news")}</link>
+      <description>${escapeXml(post.description)}</description>`;
+      if (post.imageUrl && post.imageType) {
+        rssXml += `
+      <enclosure url="${escapeXml(post.imageUrl)}" type="${escapeXml(post.imageType)}" />`;
+      }
+      rssXml += `
+      <pubDate>${escapeXml(post.pubDate.toUTCString())}</pubDate>
     </item>
-  `;
-  xml = xml.replace("</channel>", `${newItem}
-</channel>`);
-  fs2.writeFileSync(rssPath, xml, "utf8");
-  res.json({ success: true, message: "Post added!" });
+
+`;
+    }
+    rssXml += `</channel>
+</rss>`;
+    res.set("Content-Type", "application/rss+xml; charset=utf-8");
+    res.send(rssXml);
+  } catch (error) {
+    console.error("Error generating RSS feed:", error);
+    res.status(500).json({ error: "Failed to generate RSS feed" });
+  }
 });
 app.use((req, res, next) => {
   const start = Date.now();
