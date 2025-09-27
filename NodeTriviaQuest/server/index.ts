@@ -9,6 +9,9 @@ import multer from "multer";
 import cors from "cors";
 import { z } from "zod";
 import { StockService } from "./stockService";
+import { db } from "./db";
+import { rssPosts, type InsertRssPost } from "@shared/schema";
+import { desc } from "drizzle-orm";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -143,77 +146,64 @@ app.get("/api/portfolio", (req, res) => {
 });
 
 // ---------------- RSS POSTS -----------------
-app.post("/api/rss/add", upload.single("image"), (req: Request, res: Response) => {
-  // Only allow this endpoint if an admin token matches. If ADMIN_TOKEN is set in
-  // the environment, require callers to provide an identical token via the
-  // X-Admin-Token header. Without a valid token, return 401 Unauthorized.
-  const configuredToken = process.env.ADMIN_TOKEN;
-  if (configuredToken) {
-    const headerToken = req.headers["x-admin-token"];
-    if (!headerToken || headerToken !== configuredToken) {
-      return res.status(401).json({ error: "Unauthorized" });
+app.post("/api/rss/add", upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    // Only allow this endpoint if an admin token matches. If ADMIN_TOKEN is set in
+    // the environment, require callers to provide an identical token via the
+    // X-Admin-Token header. Without a valid token, return 401 Unauthorized.
+    const configuredToken = process.env.ADMIN_TOKEN;
+    if (configuredToken) {
+      const headerToken = req.headers["x-admin-token"];
+      if (!headerToken || headerToken !== configuredToken) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
     }
-  }
 
-  const { title, link, description } = req.body;
-  const file = req.file;
-  if (!title || !description) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
+    const { title, link, description } = req.body;
+    const file = req.file;
+    if (!title || !description) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
 
-  // Helper to escape XML special characters to prevent breaking the feed
-  const escapeXml = (str: string) =>
-    String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&apos;");
+    let imageUrl: string | undefined;
+    let imageType: string | undefined;
 
-  const rssPath = path.resolve(__dirname, "../client/public/rss.xml");
-  if (!fs.existsSync(rssPath)) {
-    const baseRss = `<?xml version="1.0" encoding="UTF-8" ?>
-      <rss version="2.0">
-        <channel>
-          <title>Triveast News</title>
-          <link>https://triveast.com/news</link>
-          <description>Latest updates and news from Triveast</description>
-          <language>en-us</language>
-          <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-        </channel>
-      </rss>`;
-    fs.writeFileSync(rssPath, baseRss, "utf8");
-  }
-  let xml = fs.readFileSync(rssPath, "utf8");
-
-  let imageTag = "";
-  if (file) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
-    if (!allowedExt.includes(ext)) {
-      // remove uploaded temp file if extension is invalid
+    if (file) {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
+      if (!allowedExt.includes(ext)) {
+        // remove uploaded temp file if extension is invalid
+        fs.unlinkSync(file.path);
+        return res.status(400).json({ error: "Invalid file type" });
+      }
+      
+      // Convert image to base64 for database storage (production-safe)
+      const imageBuffer = fs.readFileSync(file.path);
+      const base64Image = `data:image/${ext.replace(".", "")};base64,${imageBuffer.toString('base64')}`;
+      imageUrl = base64Image;
+      imageType = `image/${ext.replace(".", "")}`;
+      
+      // Clean up temp file
       fs.unlinkSync(file.path);
-      return res.status(400).json({ error: "Invalid file type" });
     }
-    // rename file to include extension
-    const newFileName = `${file.filename}${ext}`;
-    const uploadDir = path.resolve(__dirname, "../client/public/uploads");
-    const newPath = path.join(uploadDir, newFileName);
-    fs.renameSync(file.path, newPath);
-    imageTag = `<enclosure url="/uploads/${newFileName}" type="image/${ext.replace(".", "")}" />`;
+
+    // Create RSS post in database
+    const newPost: InsertRssPost = {
+      title,
+      description,
+      link: link || "https://triveast.com/news",
+      imageUrl,
+      imageType,
+      pubDate: new Date().toUTCString()
+    };
+
+    await db.insert(rssPosts).values(newPost);
+    res.json({ success: true, message: "Post added!" });
+    
+  } catch (error) {
+    console.error("Error adding RSS post:", error);
+    res.status(500).json({ error: "Failed to add post" });
   }
-  const newItem = `
-    <item>
-      <title>${escapeXml(title)}</title>
-      <link>${escapeXml(link || "https://triveast.com/news")}</link>
-      <description>${escapeXml(description)}</description>
-      ${imageTag}
-      <pubDate>${new Date().toUTCString()}</pubDate>
-    </item>
-  `;
-  xml = xml.replace("</channel>", `${newItem}\n</channel>`);
-  fs.writeFileSync(rssPath, xml, "utf8");
-  res.json({ success: true, message: "Post added!" });
 });
 
 // ---------------- LOGGING -----------------
