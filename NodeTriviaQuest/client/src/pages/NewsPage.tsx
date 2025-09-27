@@ -6,6 +6,8 @@ interface RSSItem {
   link: string;
   description: string;
   pubDate: string;
+  imageUrl?: string;
+  imageType?: string;
 }
 
 export default function NewsPage() {
@@ -20,12 +22,17 @@ export default function NewsPage() {
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, "application/xml");
 
-        let posts = Array.from(xml.querySelectorAll("item")).map((item) => ({
-          title: item.querySelector("title")?.textContent || "",
-          link: item.querySelector("link")?.textContent || "#",
-          description: item.querySelector("description")?.textContent || "",
-          pubDate: item.querySelector("pubDate")?.textContent || "",
-        }));
+        let posts = Array.from(xml.querySelectorAll("item")).map((item) => {
+          const enclosure = item.querySelector("enclosure");
+          return {
+            title: item.querySelector("title")?.textContent || "",
+            link: item.querySelector("link")?.textContent || "#",
+            description: item.querySelector("description")?.textContent || "",
+            pubDate: item.querySelector("pubDate")?.textContent || "",
+            imageUrl: enclosure?.getAttribute("url") || undefined,
+            imageType: enclosure?.getAttribute("type") || undefined,
+          };
+        });
 
         // 🔽 sort by pubDate (newest first)
         posts = posts.sort(
@@ -123,6 +130,23 @@ export default function NewsPage() {
                 key={idx}
                 className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl border border-white/50 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:bg-white/90"
               >
+                {/* Featured Image */}
+                {post.imageUrl && (
+                  <div className="relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      className="w-full h-64 md:h-80 object-cover transition-transform duration-700 group-hover:scale-105"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                )}
+
                 {/* Article Header */}
                 <div className="p-8">
                   {/* Title */}
