@@ -39,5 +39,14 @@
       <pubDate>Sat, 27 Sep 2025 13:49:59 GMT</pubDate>
     </item>
   
+
+    <item>
+      <title>Important Announcement</title>
+      <link>https://google.com</link>
+      <description>&lt;h2&gt;We&apos;re excited to announce...&lt;/h2&gt;&lt;p&gt;We&apos;re thrilled to share some exciting news with our community. [Your announcement details here]&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;p&gt;Key point 1&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p&gt;Key point 2&lt;/p&gt;&lt;/li&gt;&lt;li&gt;&lt;p&gt;Key point 3&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Thank you for your continued support!&lt;/p&gt;</description>
+      <enclosure url="/uploads/bdc5c3fa5c2d0dcb4794b35ed2e7936c.jpg" type="image/jpg" />
+      <pubDate>Sat, 27 Sep 2025 14:05:36 GMT</pubDate>
+    </item>
+  
 </channel>
 </rss>
