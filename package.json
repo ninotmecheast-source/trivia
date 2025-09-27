@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "build": "echo 'no build step required'"
+    "build": "cd NodeTriviaQuest && npm ci && npm run build",
+    "start": "cd NodeTriviaQuest && npm run start"
   },
   "keywords": [],
   "author": "",
