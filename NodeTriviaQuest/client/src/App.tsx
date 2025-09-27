@@ -11,9 +11,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<TriviaGame />} />
         <Route path="/update-rss" element={<UpdateRSS />} />
+        <Route path="/rss" element={<UpdateRSS />} />
         <Route path="/admin" element={<Admin />} /> {/* ✅ new route */}
         <Route path="/news" element={<NewsPage />} />
-        <Route path="/StockTrading" element={<StockTrading />} />"
+        <Route path="/StockTrading" element={<StockTrading />} />
       </Routes>
     </Router>
   );

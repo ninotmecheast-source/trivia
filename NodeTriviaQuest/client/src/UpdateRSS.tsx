@@ -408,49 +408,85 @@ export default function UpdateRSS() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            RSS Content Manager
-          </CardTitle>
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        <div className="text-center py-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+            RSS Content Studio
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Create, manage, and publish beautiful content with our advanced editor
+          </p>
+        </div>
+        
+        <Card className="backdrop-blur-sm bg-white/80 shadow-2xl border-0 rounded-2xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 border-b border-white/20">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              Content Manager
+            </CardTitle>
+          </CardHeader>
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="border-b px-6 py-2">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="compose">Compose</TabsTrigger>
-                <TabsTrigger value="templates">Templates</TabsTrigger>
-                <TabsTrigger value="drafts">Drafts ({drafts.length})</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50/50 px-8 py-4 border-b border-white/30">
+              <TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur-sm rounded-xl p-1 shadow-lg border border-white/20">
+                <TabsTrigger 
+                  value="compose" 
+                  className="rounded-lg transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg font-medium"
+                >
+                  ✨ Compose
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="templates"
+                  className="rounded-lg transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg font-medium"
+                >
+                  📚 Templates
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="drafts"
+                  className="rounded-lg transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg font-medium"
+                >
+                  📝 Drafts ({drafts.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="preview"
+                  className="rounded-lg transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg font-medium"
+                >
+                  👁️ Preview
+                </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="compose" className="p-6 space-y-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <TabsContent value="compose" className="p-8 space-y-8 bg-gradient-to-br from-white/50 to-blue-50/30">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Title and metadata */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="lg:col-span-2">
-                    <Label htmlFor="title" className="text-sm font-medium">Title</Label>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-2">
+                    <Label htmlFor="title" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      📰 Post Title
+                    </Label>
                     <Input
                       id="title"
                       type="text"
-                      placeholder="Enter your post title..."
+                      placeholder="Enter an engaging title for your post..."
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="text-lg font-semibold"
+                      className="text-lg font-semibold h-12 border-2 border-transparent bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-300 focus:border-blue-400 focus:bg-white focus:shadow-lg"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="category" className="text-sm font-medium">Category</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      🏷️ Category
+                    </Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 border-2 border-transparent bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-300 focus:border-blue-400 focus:bg-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="backdrop-blur-sm bg-white/95 border-white/20 rounded-xl shadow-2xl">
                         {POST_CATEGORIES.map(cat => (
-                          <SelectItem key={cat} value={cat}>
+                          <SelectItem key={cat} value={cat} className="rounded-lg hover:bg-blue-50 transition-colors">
                             {cat.charAt(0).toUpperCase() + cat.slice(1)}
                           </SelectItem>
                         ))}
@@ -460,103 +496,159 @@ export default function UpdateRSS() {
                 </div>
 
                 {/* Rich text editor with toolbar */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Content</Label>
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    ✏️ Content Editor
+                  </Label>
                   
                   {/* Editor toolbar */}
-                  <div className="border rounded-t-lg p-2 flex flex-wrap items-center gap-1 bg-gray-50">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().toggleBold().run()}
-                      className={editor.isActive('bold') ? 'bg-gray-200' : ''}
-                    >
-                      <Bold className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().toggleItalic().run()}
-                      className={editor.isActive('italic') ? 'bg-gray-200' : ''}
-                    >
-                      <Italic className="h-4 w-4" />
-                    </Button>
-                    <Separator orientation="vertical" className="h-6" />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().toggleBulletList().run()}
-                      className={editor.isActive('bulletList') ? 'bg-gray-200' : ''}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                      className={editor.isActive('orderedList') ? 'bg-gray-200' : ''}
-                    >
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                    <Separator orientation="vertical" className="h-6" />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLinkClick}
-                      className={editor.isActive('link') ? 'bg-gray-200' : ''}
-                    >
-                      <Link2 className="h-4 w-4" />
-                    </Button>
-                    <Separator orientation="vertical" className="h-6" />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                      className={editor.isActive({ textAlign: 'left' }) ? 'bg-gray-200' : ''}
-                    >
-                      <AlignLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                      className={editor.isActive({ textAlign: 'center' }) ? 'bg-gray-200' : ''}
-                    >
-                      <AlignCenter className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                      className={editor.isActive({ textAlign: 'right' }) ? 'bg-gray-200' : ''}
-                    >
-                      <AlignRight className="h-4 w-4" />
-                    </Button>
+                  <div className="bg-gradient-to-r from-white/80 to-slate-50/80 backdrop-blur-sm rounded-t-2xl border-2 border-blue-100/50 p-4 flex flex-wrap items-center gap-2 shadow-lg">
+                    <div className="flex items-center gap-1 bg-white/60 rounded-lg p-1 shadow-sm border border-white/30">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleBold().run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive('bold') 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <Bold className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleItalic().run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive('italic') 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <Italic className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Separator orientation="vertical" className="h-8 bg-gray-300/50" />
+                    
+                    <div className="flex items-center gap-1 bg-white/60 rounded-lg p-1 shadow-sm border border-white/30">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleBulletList().run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive('bulletList') 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive('orderedList') 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <ListOrdered className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Separator orientation="vertical" className="h-8 bg-gray-300/50" />
+                    
+                    <div className="flex items-center gap-1 bg-white/60 rounded-lg p-1 shadow-sm border border-white/30">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLinkClick}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive('link') 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <Link2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Separator orientation="vertical" className="h-8 bg-gray-300/50" />
+                    
+                    <div className="flex items-center gap-1 bg-white/60 rounded-lg p-1 shadow-sm border border-white/30">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive({ textAlign: 'left' }) 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <AlignLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive({ textAlign: 'center' }) 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <AlignCenter className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                        className={`h-9 w-9 rounded-md transition-all duration-200 hover:scale-105 ${
+                          editor.isActive({ textAlign: 'right' }) 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md' 
+                            : 'hover:bg-blue-50'
+                        }`}
+                      >
+                        <AlignRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="border border-t-0 rounded-b-lg min-h-[300px] relative">
-                    <EditorContent editor={editor} className="h-full" />
+                  <div className="bg-white/90 backdrop-blur-sm border-2 border-blue-100/50 border-t-0 rounded-b-2xl min-h-[400px] relative shadow-lg overflow-hidden">
+                    <div className="p-6">
+                      <EditorContent 
+                        editor={editor} 
+                        className="prose prose-lg max-w-none focus:outline-none min-h-[350px] text-gray-800 leading-relaxed"
+                        style={{ whiteSpace: 'pre-wrap' }}
+                      />
+                    </div>
                     
-                    {/* Smart suggestions - repositioned to avoid content overlap */}
+                    {/* Smart suggestions with beautiful styling */}
                     {showSuggestions && suggestions.length > 0 && (
-                      <div className="absolute bottom-2 right-2 bg-white border rounded-lg shadow-lg p-3 max-w-xs z-10">
-                        <div className="flex items-center justify-between gap-2 mb-2 text-sm font-medium text-gray-600">
+                      <div className="absolute bottom-4 right-4 bg-gradient-to-br from-white/95 to-blue-50/95 backdrop-blur-sm border border-blue-200/50 rounded-2xl shadow-2xl p-4 max-w-xs z-10 animate-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex items-center justify-between gap-2 mb-3 text-sm font-semibold text-gray-700">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
+                            <div className="p-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-lg">
+                              <Sparkles className="h-3 w-3 text-white" />
+                            </div>
                             Smart Suggestions
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-red-100 transition-colors"
                             onClick={() => setShowSuggestions(false)}
                           >
                             ×
@@ -567,10 +659,10 @@ export default function UpdateRSS() {
                             key={index}
                             variant="ghost"
                             size="sm"
-                            className="w-full text-left justify-start text-xs p-1 h-auto mb-1"
+                            className="w-full text-left justify-start text-xs p-2 h-auto mb-1 rounded-lg hover:bg-blue-50 transition-all duration-200 hover:shadow-sm"
                             onClick={() => applySuggestion(suggestion)}
                           >
-                            {suggestion}
+                            💡 {suggestion}
                           </Button>
                         ))}
                       </div>
@@ -579,67 +671,94 @@ export default function UpdateRSS() {
                 </div>
 
                 {/* Tags */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Tags</Label>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    🏷️ Tags
+                  </Label>
+                  <div className="flex flex-wrap gap-2 mb-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-blue-100/50 min-h-[60px]">
                     {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
+                      <Badge 
+                        key={tag} 
+                        variant="secondary" 
+                        className="cursor-pointer bg-gradient-to-r from-blue-100 to-purple-100 hover:from-blue-200 hover:to-purple-200 border border-blue-200/50 text-blue-800 transition-all duration-200 hover:scale-105 hover:shadow-md px-3 py-1" 
+                        onClick={() => removeTag(tag)}
+                      >
                         {tag} ×
                       </Badge>
                     ))}
+                    {tags.length === 0 && (
+                      <span className="text-gray-400 italic">No tags added yet...</span>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Input
                       type="text"
-                      placeholder="Add tag..."
+                      placeholder="Add a tag..."
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                      className="flex-1"
+                      className="flex-1 h-10 border-2 border-transparent bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-300 focus:border-blue-400 focus:bg-white"
                     />
-                    <Button type="button" variant="outline" size="sm" onClick={addTag}>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addTag}
+                      className="h-10 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 rounded-xl shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-200"
+                    >
                       <Tag className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
                 {/* Link and image */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="link" className="text-sm font-medium">Link (optional)</Label>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="link" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      🔗 Link (optional)
+                    </Label>
                     <Input
                       id="link"
                       type="url"
                       placeholder="https://example.com"
                       value={link}
                       onChange={(e) => setLink(e.target.value)}
+                      className="h-10 border-2 border-transparent bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-300 focus:border-blue-400 focus:bg-white"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="image" className="text-sm font-medium">Image (optional)</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="image" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      🖼️ Image (optional)
+                    </Label>
                     <Input
                       id="image"
                       type="file"
                       accept="image/jpeg,image/png,image/gif"
                       onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                      className="h-10 border-2 border-transparent bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-300 focus:border-blue-400 focus:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
                   </div>
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-2">
+                <div className="flex justify-between items-center pt-4 border-t border-blue-100/50">
+                  <div className="flex gap-3">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={saveDraft}
                       disabled={isDraftSaving}
+                      className="h-12 px-6 bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-200 hover:bg-white hover:border-gray-300"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       {isDraftSaving ? "Saving..." : "Save Draft"}
                     </Button>
                   </div>
-                  <Button type="submit" disabled={isPublishing}>
+                  <Button 
+                    type="submit" 
+                    disabled={isPublishing}
+                    className="h-12 px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white border-0 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 font-semibold"
+                  >
                     <Send className="h-4 w-4 mr-2" />
                     {isPublishing ? "Publishing..." : "Publish Post"}
                   </Button>
@@ -838,6 +957,7 @@ export default function UpdateRSS() {
           </Tabs>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
