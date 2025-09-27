@@ -106,7 +106,7 @@ export default function UpdateRSS() {
   const [lastSavedHash, setLastSavedHash] = useState<string>("");
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || '');
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || 'admin123');
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Smart suggestions
