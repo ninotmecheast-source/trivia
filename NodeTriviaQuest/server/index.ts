@@ -206,6 +206,66 @@ app.post("/api/rss/add", upload.single("image"), async (req: Request, res: Respo
   }
 });
 
+// Dynamic RSS XML endpoint - generates RSS feed from database
+app.get("/rss.xml", async (req: Request, res: Response) => {
+  try {
+    // Helper to escape XML special characters
+    const escapeXml = (str: string) =>
+      String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+    // Fetch all RSS posts from database, ordered by publication date (newest first)
+    const posts = await db.select().from(rssPosts).orderBy(desc(rssPosts.pubDate));
+
+    // Generate RSS XML
+    const lastBuildDate = posts.length > 0 ? posts[0].pubDate : new Date().toUTCString();
+    
+    let rssXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Triveast News</title>
+    <link>https://triveast.com/</link>
+    <description>Latest updates and news from Triveast</description>
+    <language>en-us</language>
+    <lastBuildDate>${escapeXml(lastBuildDate)}</lastBuildDate>
+
+`;
+
+    // Add each post as RSS item
+    for (const post of posts) {
+      rssXml += `    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${escapeXml(post.link || "https://triveast.com/news")}</link>
+      <description>${escapeXml(post.description)}</description>`;
+      
+      if (post.imageUrl && post.imageType) {
+        rssXml += `
+      <enclosure url="${escapeXml(post.imageUrl)}" type="${escapeXml(post.imageType)}" />`;
+      }
+      
+      rssXml += `
+      <pubDate>${escapeXml(post.pubDate)}</pubDate>
+    </item>
+
+`;
+    }
+
+    rssXml += `</channel>
+</rss>`;
+
+    res.set('Content-Type', 'application/rss+xml; charset=utf-8');
+    res.send(rssXml);
+    
+  } catch (error) {
+    console.error("Error generating RSS feed:", error);
+    res.status(500).json({ error: "Failed to generate RSS feed" });
+  }
+});
+
 // ---------------- LOGGING -----------------
 app.use((req, res, next) => {
   const start = Date.now();
