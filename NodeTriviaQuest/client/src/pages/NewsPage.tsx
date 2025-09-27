@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ExternalLink, Calendar, Clock, Sparkles } from "lucide-react";
 
 interface RSSItem {
@@ -13,6 +14,14 @@ interface RSSItem {
 export default function NewsPage() {
   const [items, setItems] = useState<RSSItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const createSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
 
   useEffect(() => {
     const fetchRSS = async () => {
@@ -128,74 +137,72 @@ export default function NewsPage() {
             {items.map((post, idx) => (
               <article
                 key={idx}
-                className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl border border-white/50 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:bg-white/90"
+                onClick={() => navigate(`/post/${createSlug(post.title)}`)}
+                className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl border border-white/50 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:bg-white/90 cursor-pointer"
               >
-                {/* Featured Image */}
-                {post.imageUrl && (
-                  <div className="relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                    <img
-                      src={post.imageUrl}
-                      alt={post.title}
-                      className="w-full h-64 md:h-80 object-cover transition-transform duration-700 group-hover:scale-105"
-                      onError={(e) => {
-                        // Hide image if it fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-                )}
-
-                {/* Article Header */}
+                {/* Article Content */}
                 <div className="p-8">
-                  {/* Title */}
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
-                    <a 
-                      href={post.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-3 hover:no-underline"
-                    >
-                      <span className="flex-1">{post.title}</span>
-                      <ExternalLink className="h-5 w-5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-blue-500 flex-shrink-0" />
-                    </a>
-                  </h2>
+                  <div className="flex gap-6">
+                    {/* Thumbnail Image */}
+                    {post.imageUrl && (
+                      <div className="flex-shrink-0">
+                        <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg">
+                          <img
+                            src={post.imageUrl}
+                            alt={post.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            onError={(e) => {
+                              // Hide image if it fails to load
+                              const target = e.target as HTMLImageElement;
+                              const container = target.closest('.relative') as HTMLElement;
+                              if (container) container.style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Meta Information */}
-                  <div className="flex items-center gap-6 mb-6 text-sm text-gray-600">
-                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full">
-                      <Calendar className="h-4 w-4 text-blue-500" />
-                      <span>{formatDate(post.pubDate)}</span>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title */}
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
+                        <span className="cursor-pointer">
+                          {post.title}
+                        </span>
+                      </h2>
+
+                      {/* Meta Information */}
+                      <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full">
+                          <Calendar className="h-4 w-4 text-blue-500" />
+                          <span>{formatDate(post.pubDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full">
+                          <Clock className="h-4 w-4 text-purple-500" />
+                          <span>{new Date(post.pubDate).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}</span>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="prose max-w-none mb-4">
+                        <p className="text-gray-700 leading-relaxed text-base line-clamp-3">
+                          {stripHtmlAndFormat(post.description)}
+                        </p>
+                      </div>
+
+                      {/* Read More Link */}
+                      <div className="mt-4">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 hover:scale-105 hover:shadow-lg font-medium text-sm">
+                          Read Full Post
+                          <ExternalLink className="h-4 w-4" />
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full">
-                      <Clock className="h-4 w-4 text-purple-500" />
-                      <span>{new Date(post.pubDate).toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit',
-                        hour12: true 
-                      })}</span>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="prose prose-lg max-w-none">
-                    <p className="text-gray-700 leading-relaxed text-lg">
-                      {stripHtmlAndFormat(post.description)}
-                    </p>
-                  </div>
-
-                  {/* Read More Link */}
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <a
-                      href={post.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all duration-200 hover:scale-105 hover:shadow-lg font-medium"
-                    >
-                      Read Full Article
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
                   </div>
                 </div>
               </article>
