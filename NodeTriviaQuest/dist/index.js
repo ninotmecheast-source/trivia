@@ -770,68 +770,211 @@ import path3 from "path";
 import fs2 from "fs";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import fetch2 from "node-fetch";
 import cors from "cors";
+import { z as z3 } from "zod";
+
+// server/stockService.ts
+import fetch2 from "node-fetch";
+var StockService = class {
+  balance;
+  portfolio;
+  // Cache quotes for a short period to reduce upstream API calls
+  quoteCache;
+  // Cache TTL in milliseconds (default 60 seconds)
+  cacheTtl;
+  constructor(initialBalance = 1e4, cacheTtlMs = 6e4) {
+    this.balance = initialBalance;
+    this.portfolio = {};
+    this.quoteCache = /* @__PURE__ */ new Map();
+    this.cacheTtl = cacheTtlMs;
+  }
+  /**
+   * Fetch a stock quote for the given symbol. If a cached value exists and
+   * hasn't expired, return it. Otherwise fetch from Yahoo Finance.
+   */
+  async getQuote(symbol) {
+    const key = symbol.toUpperCase();
+    const now = Date.now();
+    const cached = this.quoteCache.get(key);
+    if (cached && now - cached.timestamp < this.cacheTtl) {
+      return cached.data;
+    }
+    const response = await fetch2(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(key)}`
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch stock data");
+    }
+    const data = await response.json();
+    const quote = data?.quoteResponse?.result?.[0];
+    if (!quote) {
+      throw new Error("Invalid quote response");
+    }
+    const result = {
+      symbol: quote.symbol,
+      price: quote.regularMarketPrice,
+      change: quote.regularMarketChangePercent
+    };
+    this.quoteCache.set(key, { timestamp: now, data: result });
+    return result;
+  }
+  /**
+   * Buy shares of a stock. Throws an error if funds are insufficient or
+   * arguments are invalid. Returns updated balance and portfolio on success.
+   */
+  buy(symbol, shares, price) {
+    const key = symbol.toUpperCase();
+    const cost = shares * price;
+    if (cost > this.balance) {
+      throw new Error("Not enough funds");
+    }
+    this.balance -= cost;
+    if (!this.portfolio[key]) {
+      this.portfolio[key] = { shares: 0, avgPrice: 0 };
+    }
+    const holding = this.portfolio[key];
+    holding.avgPrice = (holding.avgPrice * holding.shares + cost) / (holding.shares + shares);
+    holding.shares += shares;
+    return { balance: this.balance, portfolio: this.getPortfolio() };
+  }
+  /**
+   * Sell shares of a stock. Throws an error if there aren't enough shares. On
+   * success returns updated balance and portfolio. If all shares are sold,
+   * removes the position from the portfolio.
+   */
+  sell(symbol, shares, price) {
+    const key = symbol.toUpperCase();
+    const position = this.portfolio[key];
+    if (!position || position.shares < shares) {
+      throw new Error("Not enough shares");
+    }
+    const revenue = shares * price;
+    this.balance += revenue;
+    position.shares -= shares;
+    if (position.shares === 0) {
+      delete this.portfolio[key];
+    }
+    return { balance: this.balance, portfolio: this.getPortfolio() };
+  }
+  /**
+   * Get the current portfolio and balance. Returns a shallow copy of the
+   * portfolio to prevent external mutation.
+   */
+  getPortfolio() {
+    return Object.fromEntries(
+      Object.entries(this.portfolio).map(([sym, position]) => [sym, { ...position }])
+    );
+  }
+  getBalance() {
+    return this.balance;
+  }
+};
+
+// server/index.ts
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path3.dirname(__filename);
 var app = express2();
-app.use(cors());
+var allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+var allowedOrigins;
+if (allowedOriginsEnv && allowedOriginsEnv !== "*") {
+  allowedOrigins = allowedOriginsEnv.split(",").map((o) => o.trim()).filter((o) => o.length > 0);
+}
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (!allowedOrigins || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    }
+  })
+);
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
 var upload = multer({
   dest: path3.resolve(__dirname, "../client/public/uploads"),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 5 * 1024 * 1024 },
   // 5MB
+  fileFilter: (_req, file, cb) => {
+    const allowedMime = ["image/jpeg", "image/png", "image/gif"];
+    const ext = path3.extname(file.originalname).toLowerCase();
+    const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
+    if (allowedMime.includes(file.mimetype) && allowedExt.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPEG, PNG and GIF images are allowed"));
+    }
+  }
 });
-var balance = 1e4;
-var portfolio = {};
+var stockService = new StockService(1e4);
+var tradeSchema = z3.object({
+  symbol: z3.string().trim().min(1).max(10).regex(/^[A-Za-z0-9.\-]+$/, { message: "Invalid ticker symbol" }),
+  shares: z3.preprocess((val) => {
+    if (typeof val === "string") return Number(val);
+    return val;
+  }, z3.number().int().positive({ message: "Shares must be a positive integer" })),
+  price: z3.preprocess((val) => {
+    if (typeof val === "string") return Number(val);
+    return val;
+  }, z3.number().positive({ message: "Price must be a positive number" }))
+});
 app.get("/api/quote/:symbol", async (req, res) => {
   const { symbol } = req.params;
   try {
-    const response = await fetch2(
-      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbol}`
-    );
-    const data = await response.json();
-    const quote = data.quoteResponse.result[0];
-    res.json({
-      symbol: quote.symbol,
-      price: quote.regularMarketPrice,
-      change: quote.regularMarketChangePercent
-    });
-  } catch {
+    const quote = await stockService.getQuote(symbol);
+    res.json(quote);
+  } catch (err) {
+    console.error("Error fetching quote:", err);
     res.status(500).json({ error: "Failed to fetch stock data" });
   }
 });
 app.post("/api/buy", (req, res) => {
-  const { symbol, shares, price } = req.body;
-  const cost = shares * price;
-  if (cost > balance) return res.status(400).json({ error: "Not enough funds" });
-  balance -= cost;
-  if (!portfolio[symbol]) portfolio[symbol] = { shares: 0, avgPrice: 0 };
-  const holding = portfolio[symbol];
-  holding.avgPrice = (holding.avgPrice * holding.shares + cost) / (holding.shares + shares);
-  holding.shares += shares;
-  res.json({ balance, portfolio });
+  const parseResult = tradeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: "Invalid trade data", details: parseResult.error.errors });
+  }
+  const { symbol, shares, price } = parseResult.data;
+  try {
+    const result = stockService.buy(symbol, shares, price);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Trade failed" });
+  }
 });
 app.post("/api/sell", (req, res) => {
-  const { symbol, shares, price } = req.body;
-  if (!portfolio[symbol] || portfolio[symbol].shares < shares)
-    return res.status(400).json({ error: "Not enough shares" });
-  const revenue = shares * price;
-  balance += revenue;
-  portfolio[symbol].shares -= shares;
-  if (portfolio[symbol].shares === 0) delete portfolio[symbol];
-  res.json({ balance, portfolio });
+  const parseResult = tradeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: "Invalid trade data", details: parseResult.error.errors });
+  }
+  const { symbol, shares, price } = parseResult.data;
+  try {
+    const result = stockService.sell(symbol, shares, price);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Trade failed" });
+  }
 });
 app.get("/api/portfolio", (req, res) => {
-  res.json({ balance, portfolio });
+  res.json({ balance: stockService.getBalance(), portfolio: stockService.getPortfolio() });
 });
 app.post("/api/rss/add", upload.single("image"), (req, res) => {
+  const configuredToken = process.env.ADMIN_TOKEN;
+  if (configuredToken) {
+    const headerToken = req.headers["x-admin-token"];
+    if (!headerToken || headerToken !== configuredToken) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
   const { title, link, description } = req.body;
   const file = req.file;
   if (!title || !description) {
     return res.status(400).json({ error: "Missing required fields" });
   }
+  const escapeXml = (str) => String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
   const rssPath = path3.resolve(__dirname, "../client/public/rss.xml");
   if (!fs2.existsSync(rssPath)) {
     const baseRss = `<?xml version="1.0" encoding="UTF-8" ?>
@@ -849,7 +992,12 @@ app.post("/api/rss/add", upload.single("image"), (req, res) => {
   let xml = fs2.readFileSync(rssPath, "utf8");
   let imageTag = "";
   if (file) {
-    const ext = path3.extname(file.originalname);
+    const ext = path3.extname(file.originalname).toLowerCase();
+    const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
+    if (!allowedExt.includes(ext)) {
+      fs2.unlinkSync(file.path);
+      return res.status(400).json({ error: "Invalid file type" });
+    }
     const newFileName = `${file.filename}${ext}`;
     const uploadDir = path3.resolve(__dirname, "../client/public/uploads");
     const newPath = path3.join(uploadDir, newFileName);
@@ -858,9 +1006,9 @@ app.post("/api/rss/add", upload.single("image"), (req, res) => {
   }
   const newItem = `
     <item>
-      <title>${title}</title>
-      <link>${link || "https://triveast.com/news"}</link>
-      <description>${description}</description>
+      <title>${escapeXml(title)}</title>
+      <link>${escapeXml(link || "https://triveast.com/news")}</link>
+      <description>${escapeXml(description)}</description>
       ${imageTag}
       <pubDate>${(/* @__PURE__ */ new Date()).toUTCString()}</pubDate>
     </item>
@@ -906,68 +1054,6 @@ app.use((req, res, next) => {
     serveStatic(app);
     registerRSS(app);
   }
-  const postsFile = path3.resolve(__dirname, "posts.json");
-  const rssFile = path3.resolve(__dirname, "../client/public/rss.xml");
-  function loadPosts() {
-    if (fs2.existsSync(postsFile)) {
-      return JSON.parse(fs2.readFileSync(postsFile, "utf-8"));
-    }
-    return [];
-  }
-  function savePosts(posts) {
-    fs2.writeFileSync(postsFile, JSON.stringify(posts, null, 2));
-  }
-  function buildRSS(posts) {
-    const items = posts.map(
-      (p) => `
-      <item>
-        <title><![CDATA[${p.title}]]></title>
-        <link>https://triveast.com/blog/${encodeURIComponent(
-        p.title.toLowerCase().replace(/\s+/g, "-")
-      )}</link>
-        <description><![CDATA[${p.content}]]></description>
-        <pubDate>${new Date(p.date).toUTCString()}</pubDate>
-      </item>`
-    ).join("\n");
-    const rss = `<?xml version="1.0" encoding="UTF-8" ?>
-  <rss version="2.0">
-    <channel>
-      <title>Triveast Blog</title>
-      <link>https://triveast.com</link>
-      <description>Latest updates and posts from Triveast</description>
-      <language>en-us</language>
-      <lastBuildDate>${(/* @__PURE__ */ new Date()).toUTCString()}</lastBuildDate>
-      ${items}
-    </channel>
-  </rss>`;
-    fs2.writeFileSync(rssFile, rss, "utf-8");
-  }
-  app.post("/api/rss/add", upload.array("media", 5), (req, res) => {
-    try {
-      const { title, content } = req.body;
-      const media = req.files.map(
-        (f) => "/uploads/" + f.filename
-      );
-      const posts = loadPosts();
-      const newPost = {
-        title,
-        content,
-        media,
-        date: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      posts.unshift(newPost);
-      savePosts(posts);
-      buildRSS(posts);
-      res.json({ message: "Post added!", post: newPost });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Failed to add post" });
-    }
-  });
-  app.get("/api/rss/posts", (req, res) => {
-    const posts = loadPosts();
-    res.json(posts);
-  });
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
     log(`serving on port ${port}`);
