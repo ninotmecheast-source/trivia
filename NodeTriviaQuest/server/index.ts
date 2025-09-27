@@ -53,10 +53,9 @@ app.use(express.urlencoded({ extended: false }));
 // ✅ Multer setup
 // Configure multer to restrict file size and file types for uploads. Only
 // accept JPEG, PNG and GIF images to reduce the risk of arbitrary file
-// uploads. Files are stored temporarily under the uploads directory and
-// renamed after validation below.
+// uploads. Files are stored in memory to avoid filesystem dependency in production.
 const upload = multer({
-  dest: path.resolve(__dirname, "../client/public/uploads"),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (_req, file, cb) => {
     const allowedMime = ["image/jpeg", "image/png", "image/gif"];
@@ -173,19 +172,16 @@ app.post("/api/rss/add", upload.single("image"), async (req: Request, res: Respo
       const ext = path.extname(file.originalname).toLowerCase();
       const allowedExt = [".jpg", ".jpeg", ".png", ".gif"];
       if (!allowedExt.includes(ext)) {
-        // remove uploaded temp file if extension is invalid
-        fs.unlinkSync(file.path);
+        // No file cleanup needed with memory storage
         return res.status(400).json({ error: "Invalid file type" });
       }
       
-      // Convert image to base64 for database storage (production-safe)
-      const imageBuffer = fs.readFileSync(file.path);
-      const base64Image = `data:image/${ext.replace(".", "")};base64,${imageBuffer.toString('base64')}`;
+      // Convert image buffer to base64 for database storage (production-safe)
+      const base64Image = `data:image/${ext.replace(".", "")};base64,${file.buffer.toString('base64')}`;
       imageUrl = base64Image;
       imageType = `image/${ext.replace(".", "")}`;
       
-      // Clean up temp file
-      fs.unlinkSync(file.path);
+      // No file cleanup needed with memory storage
     }
 
     // Create RSS post in database
